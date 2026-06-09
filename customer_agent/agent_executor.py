@@ -12,6 +12,8 @@ from a2a.server.events import EventQueue
 from a2a.server.tasks import TaskUpdater
 from a2a.types import Part, TextPart
 
+from common.conversation_memory import append_exchange, get_history
+from common.observability import trace_operation
 from customer_agent.graph import build_graph
 
 logger = logging.getLogger(__name__)
@@ -40,17 +42,23 @@ class CustomerAgentExecutor(AgentExecutor):
         await updater.start_work()
 
         try:
-            # Build a per-request graph so the tool closure captures this request's IDs
             graph = build_graph(
                 trace_id=trace_id,
                 context_id=context_id,
                 depth=depth,
             )
 
-            result = await graph.ainvoke(
-                {"messages": [HumanMessage(content=question)]},
-                config={"configurable": {"thread_id": context_id}},
-            )
+            messages = [*get_history(context_id), HumanMessage(content=question)]
+
+            with trace_operation(
+                "customer_agent",
+                trace_id=trace_id,
+                context_id=context_id,
+            ):
+                result = await graph.ainvoke(
+                    {"messages": messages},
+                    config={"configurable": {"thread_id": context_id}},
+                )
 
             # Extract the last AI message from the result
             answer = ""
@@ -73,6 +81,8 @@ class CustomerAgentExecutor(AgentExecutor):
 
             if not answer:
                 answer = "I was unable to process your legal question at this time."
+
+            append_exchange(context_id, question, answer)
 
             await updater.add_artifact(
                 parts=[Part(root=TextPart(text=answer))],

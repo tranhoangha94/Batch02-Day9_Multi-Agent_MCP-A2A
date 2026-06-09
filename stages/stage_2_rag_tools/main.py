@@ -11,6 +11,9 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8")
+
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
@@ -36,7 +39,13 @@ LEGAL_KNOWLEDGE = [
     },
     {
         "id": "nda_trade_secret",
-        "keywords": ["nda", "non-disclosure", "confidential", "trade secret", "agreement"],
+        "keywords": [
+            "nda",
+            "non-disclosure",
+            "confidential",
+            "trade secret",
+            "agreement",
+        ],
         "text": (
             "NDA breaches may trigger both contractual and statutory liability. Under the Defend "
             "Trade Secrets Act (DTSA, 18 U.S.C. § 1836), misappropriation of trade secrets can "
@@ -71,7 +80,14 @@ LEGAL_KNOWLEDGE = [
     },
     {
         "id": "injunctive_relief",
-        "keywords": ["injunction", "restraining", "order", "equitable", "nda", "breach"],
+        "keywords": [
+            "injunction",
+            "restraining",
+            "order",
+            "equitable",
+            "nda",
+            "breach",
+        ],
         "text": (
             "Courts routinely grant temporary restraining orders (TROs) and preliminary injunctions "
             "for NDA breaches because: (1) confidential information, once disclosed, cannot be "
@@ -79,6 +95,23 @@ LEGAL_KNOWLEDGE = [
             "for trade secret misappropriation in many jurisdictions. The movant must show "
             "likelihood of success on the merits, irreparable harm, balance of equities, and "
             "public interest (Winter v. Natural Resources Defense Council, 2008)."
+        ),
+    },
+    {
+        "id": "labor_law",
+        "keywords": [
+            "luật lao động",
+            "lao động",
+            "sa thải",
+            "hợp đồng lao động",
+            "labor",
+            "termination",
+        ],
+        "text": (
+            "Theo Bộ luật Lao động Việt Nam 2019, người sử dụng lao động có thể "
+            "đơn phương chấm dứt hợp đồng trong các trường hợp: (1) người lao động "
+            "thường xuyên không hoàn thành công việc; (2) bị ốm đau, tai nạn đã điều trị "
+            "12 tháng chưa khỏi; (3) thiên tai, hỏa hoạn; (4) người lao động đủ tuổi nghỉ hưu."
         ),
     },
 ]
@@ -91,10 +124,14 @@ LEGAL_KNOWLEDGE = [
 @tool
 def search_legal_database(query: str) -> str:
     """Search the legal knowledge base for relevant statutes, case law, and legal principles."""
-    query_words = set(query.lower().split())
+    query_lower = query.lower()
+    query_words = set(query_lower.split())
     scored = []
     for entry in LEGAL_KNOWLEDGE:
         overlap = len(query_words & set(entry["keywords"]))
+        for kw in entry["keywords"]:
+            if kw.lower() in query_lower:
+                overlap += 1
         if overlap > 0:
             scored.append((overlap, entry))
     scored.sort(key=lambda x: x[0], reverse=True)
@@ -134,10 +171,30 @@ def calculate_damages(breach_type: str, contract_value: float) -> str:
         f"  Total estimated exposure: ${total:,.2f}"
     )
 
+@tool
+def search_case_law(keywords: str) -> str:
+    """Tìm kiếm án lệ theo từ khóa.
+    
+    Args:
+        keywords: Từ khóa tìm kiếm
+    """
+    cases = {
+        "breach": "Hadley v. Baxendale (1854) - Consequential damages",
+        "negligence": "Donoghue v. Stevenson (1932) - Duty of care",
+        "contract": "Carlill v. Carbolic Smoke Ball Co (1893) - Unilateral contract",
+    }
+    for key, case in cases.items():
+        if key in keywords.lower():
+            return case
+    return "Không tìm thấy án lệ phù hợp"
+
 
 TOOLS = [search_legal_database, calculate_damages]
 
-QUESTION = "What are the legal consequences if a company breaches a non-disclosure agreement?"
+QUESTION = (
+    "What are the legal remedies and damages available when a company "
+    "breaches a contract under the UCC?"
+)
 
 
 async def main():

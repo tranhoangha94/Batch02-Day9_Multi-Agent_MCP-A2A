@@ -1,0 +1,10 @@
+2026-06-09 16:00:24,539 [compliance_agent] INFO HTTP Request: POST http://localhost:10000/register "HTTP/1.1 200 OK"
+2026-06-09 16:00:24,544 [compliance_agent] INFO Registered with registry (attempt 1)
+2026-06-09 16:00:24,552 [compliance_agent] INFO Compliance Agent listening on port 10103
+INFO:     Started server process [17860]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+ERROR:    [Errno 10048] error while attempting to bind on address ('0.0.0.2026-06-09 16:02:01,871 [compliance_agent] WARNING Deprecated agent card endpoint '/.well-known/agent.json' accessed. Please use '/.well-known/agent-card.json' instead. This endpoint will be removed in a future version.
+2026-06-09 16:02:01,890 [compliance_agent] INFO ComplianceAgent executing | task=b8056e0c-e1d4-4696-9404-c650975ff4fb context=fccc9002-7efb-4384-9b7a-8b4f38f74e63 trace=c35b311c-c2c2-42b6-9ea7-d98200da1515 depth=2
+2026-06-09 16:02:03,317 [compliance_agent] INFO Task not found or task_id not set. Creating new task for event (task_id: b8056e0c-e1d4-4696-9404-c650975ff4fb, context_id: fccc9002-7efb-4384-9b7a-8b4f38f74e63).
+2026-06-09 16:02:04,473 [compliance_agent] INFO HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"

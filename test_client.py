@@ -6,13 +6,19 @@ Sends a legal question to the Customer Agent and prints the response.
 import asyncio
 import os
 import sys
+from uuid import uuid4
 
 import httpx
 from dotenv import load_dotenv
 
 load_dotenv()
 
+from common.auth import auth_headers
+from common.observability import get_metrics, setup_langsmith, trace_operation
+
 CUSTOMER_AGENT_URL = os.getenv("CUSTOMER_AGENT_URL", "http://localhost:10100")
+CONTEXT_ID = os.getenv("TEST_CONTEXT_ID", str(uuid4()))
+TRACE_ID = str(uuid4())
 
 QUESTION = (
     "If a company breaks a contract and avoids taxes, "
@@ -21,11 +27,15 @@ QUESTION = (
 
 
 async def main() -> None:
+    setup_langsmith()
+
     print(f"Connecting to Customer Agent at {CUSTOMER_AGENT_URL}")
     print(f"Question: {QUESTION}")
+    print(f"trace_id: {TRACE_ID}  (Bài 5.1 — tìm trong logs)")
+    print(f"context_id: {CONTEXT_ID}  (Challenge 1 — conversation memory)")
     print("-" * 60)
 
-    async with httpx.AsyncClient(timeout=300.0) as http_client:
+    async with httpx.AsyncClient(timeout=300.0, headers=auth_headers()) as http_client:
         # Resolve agent card
         card_url = f"{CUSTOMER_AGENT_URL}/.well-known/agent.json"
         try:
@@ -39,7 +49,6 @@ async def main() -> None:
 
         from a2a.types import AgentCard, Message, Part, Role, TextPart, MessageSendParams
         from a2a.client import A2AClient
-        from uuid import uuid4
 
         agent_card = AgentCard.model_validate(card_resp.json())
         print(f"Connected to agent: {agent_card.name} v{agent_card.version}")
@@ -54,6 +63,12 @@ async def main() -> None:
             role=Role.user,
             parts=[Part(root=TextPart(text=QUESTION))],
             message_id=str(uuid4()),
+            context_id=CONTEXT_ID,
+            metadata={
+                "trace_id": TRACE_ID,
+                "context_id": CONTEXT_ID,
+                "delegation_depth": 0,
+            },
         )
         request = SendMessageRequest(
             id=str(uuid4()),
@@ -61,7 +76,8 @@ async def main() -> None:
         )
 
         print("Sending request (this may take 30-60s while agents chain)...\n")
-        response = await client.send_message(request)
+        with trace_operation("test_client", trace_id=TRACE_ID):
+            response = await client.send_message(request)
 
         # Parse response
         result_text = ""
@@ -91,6 +107,9 @@ async def main() -> None:
         else:
             print("No text response received. Raw response:")
             print(response)
+
+        print("-" * 60)
+        print(f"Metrics: {get_metrics()}")
 
 
 if __name__ == "__main__":

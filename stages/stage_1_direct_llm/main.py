@@ -14,12 +14,15 @@ import sys
 # Allow running directly: python stages/stage_1_direct_llm/main.py
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8")
+
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from common.llm import get_llm
 
-QUESTION = "What are the legal consequences if a company breaches a non-disclosure agreement?"
+QUESTION = "Sử dụng bao nhiêu kg ma túy trở lên thì bị tử hình?"
 
 
 async def main():

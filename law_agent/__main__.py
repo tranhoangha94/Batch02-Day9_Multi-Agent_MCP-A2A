@@ -16,6 +16,7 @@ from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import AgentCapabilities, AgentCard, AgentSkill
 
+from common.a2a_server import finalize_agent_app
 from common.registry_client import register
 from law_agent.agent_executor import LawAgentExecutor
 
@@ -90,7 +91,7 @@ async def main() -> None:
         agent_card=agent_card,
         http_handler=request_handler,
     )
-    app = app_builder.build()
+    app = finalize_agent_app(app_builder.build())
 
     config = uvicorn.Config(app, host="0.0.0.0", port=PORT, log_level="info")
     server = uvicorn.Server(config)
